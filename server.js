@@ -6,9 +6,24 @@ dotenv.config();
 
 const app = express();
 
-// Allow all origins for testing (fix CORS)
+// ✅ CORS configuration - Allow your Netlify frontend
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://harmonicus-cajeta-da2266.netlify.app'  // Your live frontend URL
+];
+
 app.use(cors({
-  origin: '*',
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      console.log('❌ Blocked origin:', origin);
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    console.log('✅ Allowed origin:', origin);
+    return callback(null, true);
+  },
   credentials: true
 }));
 
@@ -25,6 +40,12 @@ app.post('/auth/signup', (req, res) => {
   console.log('✅ Signup request received:', req.body);
   
   const { name, email, phone, password } = req.body;
+  
+  // Validate required fields
+  if (!name || !email || !phone || !password) {
+    console.log('❌ Missing required fields');
+    return res.status(400).json({ message: 'All fields are required' });
+  }
   
   // Check if user already exists
   const existingUser = users.find(u => u.email === email);
@@ -102,9 +123,44 @@ app.get('/enquiries', (req, res) => {
 // ============ PROPERTY ROUTES ============
 
 const properties = [
-  { id: 1, title: 'Sunrise Heights', category: 'Residential', price: 4500000, location: 'Panchavati', images: ['https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=500'], bedrooms: 3, area_sqft: 1450, listingType: 'Sale', propertyType: 'Apartment', status: 'ongoing' },
-  { id: 2, title: 'Green Valley House', category: 'Residential', price: 8500000, location: 'College Road', images: ['https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=500'], bedrooms: 4, area_sqft: 2200, listingType: 'Sale', propertyType: 'Independent House', status: 'completed' },
-  { id: 3, title: 'Business Plaza', category: 'Commercial', price: 15000000, location: 'CBD', images: ['https://images.unsplash.com/photo-1497366216548-37526070297c?w=500'], area_sqft: 1500, listingType: 'Sale', propertyType: 'Office Space', status: 'completed' }
+  { 
+    id: 1, 
+    title: 'Sunrise Heights', 
+    category: 'Residential', 
+    price: 4500000, 
+    location: 'Panchavati', 
+    images: ['https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=500'], 
+    bedrooms: 3, 
+    area_sqft: 1450, 
+    listingType: 'Sale', 
+    propertyType: 'Apartment', 
+    status: 'ongoing' 
+  },
+  { 
+    id: 2, 
+    title: 'Green Valley House', 
+    category: 'Residential', 
+    price: 8500000, 
+    location: 'College Road', 
+    images: ['https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=500'], 
+    bedrooms: 4, 
+    area_sqft: 2200, 
+    listingType: 'Sale', 
+    propertyType: 'Independent House', 
+    status: 'completed' 
+  },
+  { 
+    id: 3, 
+    title: 'Business Plaza', 
+    category: 'Commercial', 
+    price: 15000000, 
+    location: 'CBD', 
+    images: ['https://images.unsplash.com/photo-1497366216548-37526070297c?w=500'], 
+    area_sqft: 1500, 
+    listingType: 'Sale', 
+    propertyType: 'Office Space', 
+    status: 'completed' 
+  }
 ];
 
 app.get('/properties', (req, res) => {
@@ -113,7 +169,11 @@ app.get('/properties', (req, res) => {
 
 app.get('/properties/:id', (req, res) => {
   const property = properties.find(p => p.id == req.params.id);
-  res.json(property);
+  if (property) {
+    res.json(property);
+  } else {
+    res.status(404).json({ message: 'Property not found' });
+  }
 });
 
 // Default route
@@ -126,5 +186,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`✅ Auth routes: /auth/signup, /auth/login`);
-  console.log(`📊 CORS enabled for all origins`);
+  console.log(`📊 CORS enabled for: ${allowedOrigins.join(', ')}`);
 });
